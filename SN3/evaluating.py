@@ -1,32 +1,8 @@
 
 from pylab import *
-from matplotlib import rc
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
 import os
-import logging
-import cmath as cm
-import math
-import random
-import scipy
-from scipy.stats import norm
-from astropy.io import fits
-from astropy.cosmology import WMAP9 as cosmo
-import glob
-import pandas as pd
-
-
-import os
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-
-import os
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 with open('SN3/Data-LightCurves/Data-LightCurves/EI2019-Data-LightCurves-SN-Redshifts.txt', 'r') as f:
     y_true = np.array([float(line.strip()) for line in f if line.strip()])
