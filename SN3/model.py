@@ -1,65 +1,38 @@
 import numpy as np
-import os # Used for creating dummy files for demonstration
-
-# --- Helper function to create dummy files for demonstration ---
-def create_dummy_files(num_supernovae=150, data_dir="sn_data"):
-    """Creates dummy data files for demonstration purposes."""
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-
-    # Dummy light curve files
-    for i in range(1, num_supernovae + 1):
-        filename = os.path.join(data_dir, f"supernova_{i:03d}.txt")
-        # Each file has 10 observations, 3 columns: time, mag, err_mag
-        time = np.sort(np.random.rand(10) * 100) # time in days
-        mag = 18 + np.random.rand(10) * 2 - 1    # magnitude
-        err_mag = 0.1 + np.random.rand(10) * 0.1 # error in magnitude
-        data = np.column_stack((time, mag, err_mag))
-        np.savetxt(filename, data, header="time_days magnitude error_magnitude", comments="# ")
-    print(f"Created {num_supernovae} dummy light curve files in '{data_dir}'")
-
-    # Dummy redshift file
-    redshift_filename = os.path.join(data_dir, "redshifts.txt")
-    redshifts = np.random.rand(num_supernovae) * 0.5 # redshifts up to 0.5
-    np.savetxt(redshift_filename, redshifts, header="redshift", comments="# ")
-    print(f"Created dummy redshift file: '{redshift_filename}'")
-
-    # Dummy model light curve file
-    model_filename = os.path.join(data_dir, "model_snia_light_curve.txt")
-    model_time = np.linspace(-20, 50, 71) # time in days relative to peak
-    model_abs_mag = -19.3 + (model_time/10)**2 - (model_time/30)**3 # A very simple model
-    model_data = np.column_stack((model_time, model_abs_mag))
-    np.savetxt(model_filename, model_data, header="time_days_relative_peak absolute_magnitude", comments="# ")
-    print(f"Created dummy model light curve file: '{model_filename}'")
+import os
+import glob
 
 # --- Main Data Loading Script ---
 
-def load_all_supernova_data(num_supernovae, light_curve_dir, redshift_file_path, model_file_path):
+def load_all_supernova_data(light_curve_dir, redshift_file_path, model_file_path):
     """
     Loads all supernova data: individual light curves, redshifts, and the model light curve.
 
     Args:
-        num_supernovae (int): The total number of supernovae.
         light_curve_dir (str): The directory containing the light curve files.
-                               Assumes files are named like 'supernova_001.txt', etc.
+                               Assumes files are named like 'EI2019-Data-LightCurves-SN-{i}_lightcurve.txt'.
         redshift_file_path (str): The path to the file containing redshifts.
         model_file_path (str): The path to the file containing the SNIa model light curve.
 
     Returns:
-        tuple: (all_light_curves, all_redshifts, model_light_curve)
+        tuple: (all_light_curves, all_redshifts, model_light_curve, num_supernovae)
                all_light_curves (list): A list of numpy arrays. Each array contains
                                         the (time, magnitude, error_magnitude) for a supernova.
                all_redshifts (numpy.ndarray): A 1D array of redshifts.
                model_light_curve (numpy.ndarray): A 2D array of (time, absolute_magnitude)
                                                   for the model.
+               num_supernovae (int): The actual number of loaded supernovae.
     """
     all_light_curves = []
+      # Find all light curve files in the directory (exclude model and redshift files)
+    light_curve_pattern = os.path.join(light_curve_dir, "EI2019-Data-LightCurves-SN-*_lightcurve.txt")
+    all_files = sorted(glob.glob(light_curve_pattern))
+    # Filter out non-supernova files (model and redshift files)
+    light_curve_files = [f for f in all_files if not ("SNI-Average" in f or "Redshifts" in f)]
     
-    print(f"Attempting to load light curves from: {light_curve_dir}")
-    for i in range(1, num_supernovae + 1):
-        # Adjust the filename pattern as needed
-        # Example: 'sn_data_fieldX_numY.txt', 'supernova_id_Z.txt'
-        filename = os.path.join(light_curve_dir, f"supernova_{i:03d}.txt")
+    print(f"Found {len(light_curve_files)} light curve files in: {light_curve_dir}")
+    
+    for i, filename in enumerate(light_curve_files):
         try:
             # Each file is expected to have 3 columns: time, magnitude, error_magnitude
             lc_data = np.loadtxt(filename)
@@ -76,8 +49,8 @@ def load_all_supernova_data(num_supernovae, light_curve_dir, redshift_file_path,
                 continue
             
             all_light_curves.append(lc_data)
-            if i <= 3 or i == num_supernovae : # Print info for first few and last
-                 print(f"Successfully loaded: {filename}, shape: {lc_data.shape}")
+            if i <= 3 or i == len(light_curve_files) - 1: # Print info for first few and last
+                 print(f"Successfully loaded: {os.path.basename(filename)}, shape: {lc_data.shape}")
         except FileNotFoundError:
             print(f"Error: Light curve file not found: {filename}")
             all_light_curves.append(None) # Add a placeholder or handle error
@@ -85,9 +58,11 @@ def load_all_supernova_data(num_supernovae, light_curve_dir, redshift_file_path,
             print(f"Error loading {filename}: {e}")
             all_light_curves.append(None) # Add a placeholder or handle error
 
+    num_supernovae = len(light_curve_files)
+    
     print(f"\nAttempting to load redshifts from: {redshift_file_path}")
     try:
-        # Expected to be a single column file with 'num_supernovae' rows
+        # Expected to be a single column file with redshifts for each supernova
         all_redshifts = np.loadtxt(redshift_file_path)
         if all_redshifts.shape[0] != num_supernovae:
             print(f"Warning: Redshift file {redshift_file_path} contains {all_redshifts.shape[0]} entries, expected {num_supernovae}.")
@@ -113,26 +88,19 @@ def load_all_supernova_data(num_supernovae, light_curve_dir, redshift_file_path,
         print(f"Error loading {model_file_path}: {e}")
         model_light_curve = None
 
-    return all_light_curves, all_redshifts, model_light_curve
+    return all_light_curves, all_redshifts, model_light_curve, num_supernovae
 
 # --- Example Usage ---
 if __name__ == "__main__":
-    # Configuration - IMPORTANT: Adjust these paths to your actual data locations
-    NUMBER_OF_SUPERNOVAE = 150
-    DATA_DIRECTORY = "sn_data_wp3"  # Create this directory and place your files here
-                                 # or point to your existing directory.
+    # Configuration - Real data paths
+    DATA_DIRECTORY = os.path.join("data", "Data-LightCurves")  # Path to the real data directory
     
-    # Create dummy files for the script to run.
-    # In a real scenario, you would comment this line out and use your actual files.
-    create_dummy_files(num_supernovae=NUMBER_OF_SUPERNOVAE, data_dir=DATA_DIRECTORY)
-
     LIGHT_CURVE_FILES_DIR = DATA_DIRECTORY 
-    REDSHIFT_FILE = os.path.join(DATA_DIRECTORY, "redshifts.txt")
-    MODEL_FILE = os.path.join(DATA_DIRECTORY, "model_snia_light_curve.txt")
+    REDSHIFT_FILE = os.path.join(DATA_DIRECTORY, "EI2019-Data-LightCurves-SN-Redshifts.txt")
+    MODEL_FILE = os.path.join(DATA_DIRECTORY, "EI2019-Data-LightCurves-SN-SNI-Average_LightCurve.txt")
 
-    print("--- Starting Data Loading ---")
-    light_curves, redshifts, model_sn_lc = load_all_supernova_data(
-        num_supernovae=NUMBER_OF_SUPERNOVAE,
+    print("--- Starting Real Data Loading ---")
+    light_curves, redshifts, model_sn_lc, num_supernovae = load_all_supernova_data(
         light_curve_dir=LIGHT_CURVE_FILES_DIR,
         redshift_file_path=REDSHIFT_FILE,
         model_file_path=MODEL_FILE
@@ -142,7 +110,7 @@ if __name__ == "__main__":
     # Verify loaded data (basic checks)
     if light_curves:
         loaded_lc_count = sum(1 for lc in light_curves if lc is not None)
-        print(f"Number of successfully loaded light curves: {loaded_lc_count}/{NUMBER_OF_SUPERNOVAE}")
+        print(f"Number of successfully loaded light curves: {loaded_lc_count}/{num_supernovae}")
         if loaded_lc_count > 0:
             # Display info for the first successfully loaded light curve
             first_valid_lc = next((lc for lc in light_curves if lc is not None), None)
@@ -160,7 +128,7 @@ if __name__ == "__main__":
         print("Columns: time_days_relative_peak, absolute_magnitude")
 
     print("\n--- Next Steps ---")
-    print("With the data loaded, you can now proceed with WP-SN-3 tasks:")
+    print("With the real data loaded, you can now proceed with WP-SN-3 tasks:")
     print("1. For each supernova:")
     print("   a. Access its light curve data (e.g., light_curves[i]).")
     print("   b. Access its redshift (e.g., redshifts[i]).")
