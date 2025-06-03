@@ -1,39 +1,44 @@
 # MCMC
-
 import numpy as np
 import cosmolib as cs
 from matplotlib.pyplot import rc, errorbar, xlim, xlabel, ylabel, legend, show, plot
+from mpl_toolkits.mplot3d import Axes3D
+import pandas as pd
 
+df = pd.read_csv('SN3/supernova_fitting_results_20250603_152308.csv')
 
-# ------------------------------- Example data -------------------------------
-rc('figure',figsize=(10,5))
-x = np.linspace(0,1,10)
-sy = 0.2
-y = 3*x + 2 + np.random.randn(10)*sy
-sigma_y = np.zeros(10) + sy
-errorbar(x,y,yerr=sigma_y,fmt='ro', label='Sample Data')
-xlim(-0.1,1.1)
-xlabel('x')
-ylabel('y')
-legend(loc='upper left')
-show()
-# -----------------------------------------------------------------------------
-z = np.linspace(0, 1, 150)  # Redshift values
-mu_exp = np.linspace(0, 1, 150)
-sigma_mu_exp = np.zeros(150) + 0.1  # Assuming a constant error for demonstration
+z = df['redshift'].values
+mu_exp = df['mu'].values
+sigma_mu_exp = df['mu_err'].values
+
 
 def chi_deux(z, par):
     return (cs.musn1a(z, {'omega_M_0': par[0], 'omega_lambda_0': par[1], 'h': par[2], 'w0': -1})-mu_exp)**2/sigma_mu_exp
 
-data = cs.Data(z, mu_exp, sigma_mu_exp, chi_deux)
+def muPred(z, par):
+    res = cs.musn1a(z, {'omega_M_0': par[0], 'omega_lambda_0': par[1], 'h': par[2], 'w0': -1})
+    return res 
 
-# Running the MCMC exploration
-guess = np.array([0.3, 0.7, 1.])
-chain = data.run_mcmc(guess, nbmc=1000, allvariables=['p0', 'p1'])
+data = cs.Data(z, np.round(mu_exp, 2), sigma_mu_exp,  muPred)
 
-# Plotting the elements of the chain
-plot(chain['p0'], chain['p1'], ',', alpha=0.1)
-plot(2,3,'g*', label='True Value',ms=20)
-xlabel('m')
-ylabel('s')
-show()
+
+guess = np.array([0.7, 0.3, 0.7])
+chain = data.run_mcmc(guess, nbmc=10000, allvariables=['p0','p1','p2'], fixpars=[2])
+
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(8, 6))
+plt.scatter(chain['p0'], chain['p1'], c='b', marker=',', alpha=0.1, label='MCMC samples')
+plt.scatter(0.389, 0.389, c='g', marker='*', s=200, label='True Value')
+plt.xlabel('omegaM')
+plt.ylabel('omegaL')
+plt.legend()
+plt.title('MCMC samples in omegaM vs omegaL')
+plt.show()
+
+omegaM_chain = chain['p0']
+omegaL_chain = chain['p1']
+omegaM_best = np.median(omegaM_chain)
+omegaL_best = np.median(omegaL_chain)
+
+print(omegaM_best, omegaL_best)
