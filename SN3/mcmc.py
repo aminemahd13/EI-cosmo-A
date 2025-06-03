@@ -18,20 +18,17 @@ ylabel('y')
 legend(loc='upper left')
 show()
 # -----------------------------------------------------------------------------
+z = np.linspace(0, 1, 150)  # Redshift values
+mu_exp = np.linspace(0, 1, 150)
+sigma_mu_exp = np.zeros(150) + 0.1  # Assuming a constant error for demonstration
 
+def chi_deux(z, par):
+    return (cs.musn1a(z, {'omega_M_0': par[0], 'omega_lambda_0': par[1], 'h': par[2], 'w0': -1})-mu_exp)**2/sigma_mu_exp
 
-
-# function to fit
-# def fit_function(x, par):
-#     return 1./(np.sqrt(2.*np.pi)*par[1]) * np.exp(-(x-par[0])**2/(2.*par[1]**2))
-
-def test_fonction(x, par):
-    return par[0] + par[1]*x
-
-data = cs.Data(x, y, sigma_y, test_fonction)
+data = cs.Data(z, mu_exp, sigma_mu_exp, chi_deux)
 
 # Running the MCMC exploration
-guess = np.array([0., 0.]) # Initial guess for parameters [p0, p1]
+guess = np.array([0.3, 0.7, 1.])
 chain = data.run_mcmc(guess, nbmc=1000, allvariables=['p0', 'p1'])
 
 # Plotting the elements of the chain
