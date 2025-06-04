@@ -46,14 +46,11 @@ valid = hit_count > 0
 final_map[valid] = day_map[valid] / hit_count[valid]
 np.savetxt("hit_count_day_"+str(day)+".txt", hit_count, fmt="%d")
 # --- Plot ---
-hp.mollview(
-    final_map,
-    title="Sky Map - Day "+ str(day)+ "(RA/Dec, No Elevation Mask)",
-    unit="μK",
-    coord="C",
-    cmap="inferno",
-    min=np.percentile(final_map[valid], 1),
-    max=np.percentile(final_map[valid], 99)
-)
+hp.gnomview(final_map,
+            rot = [point_array[3][100], point_array[4][100],0],
+            coord='C',
+            reso = 10, min= -200, max = 200)
+
+
 hp.graticule()
 plt.show()
