@@ -50,15 +50,12 @@ valid = hit_count > 0
 final_map[valid] = combined_map[valid] / hit_count[valid]
 np.savetxt("hit_count_combined.txt", hit_count, fmt="%d")
 # --- Plot ---
-hp.mollview(
-    final_map,
-    title="Combined Sky Map (RA/Dec from All 9 Days, No Elevation Mask)",
-    unit="μK",
-    coord="C",
-    cmap="inferno",
-    min=np.percentile(final_map[valid], 1),
-    max=np.percentile(final_map[valid], 99)
-)
+hp.gnomview(final_map,
+            rot = [point_array[3][100], point_array[4][100],0],
+            coord='C',
+            reso = 10, min= -200, max = 200)
+
+
 hp.graticule()
 plt.show()
 
