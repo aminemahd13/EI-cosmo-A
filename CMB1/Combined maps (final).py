@@ -51,7 +51,7 @@ final_map[valid] = combined_map[valid] / hit_count[valid]
 np.savetxt("hit_count_combined.txt", hit_count, fmt="%d")
 # --- Plot ---
 hp.gnomview(final_map,
-            rot = [point_array[3][100], point_array[4][100],0],
+            rot = [sum(point_array[3]) / len(point_array[3]), sum(point_array[4]) / len(point_array[4]),0],
             coord='C',
             reso = 10, min= -200, max = 200)
 
